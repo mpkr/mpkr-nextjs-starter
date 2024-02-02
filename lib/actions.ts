@@ -1,8 +1,11 @@
 "use server";
 
+import { signIn } from "@/auth";
 import { FormStatusProps } from "@/components/ui/form-status";
+import { DEFAULT_LOGIN_REDIRECT } from "@/route";
 import { LoginSchema, RegisterSchema } from "@/schemas";
 import bcrypt from "bcrypt";
+import { AuthError } from "next-auth";
 import { z } from "zod";
 import { db } from "./db";
 
@@ -14,11 +17,25 @@ export const login = async (
   if (!validatedFields.success) {
     return { status: "error", message: "Something went wrong" };
   }
+
+  const { email, password } = validatedFields.data;
   try {
-    await new Promise((reject) => setTimeout(reject, 2000));
+    await signIn("credentials", {
+      email,
+      password,
+      redirectTo: DEFAULT_LOGIN_REDIRECT,
+    });
     return { status: "success", message: "Email sent!" };
   } catch (error) {
-    return { status: "error", message: "Failed to login " + error };
+    if (error instanceof AuthError) {
+      switch (error.type) {
+        case "CredentialsSignin":
+          return { status: "error", message: "Invalid credentials" };
+        default:
+          return { status: "error", message: "Something went wrong!" };
+      }
+    }
+    throw error;
   }
 };
 
