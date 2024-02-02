@@ -2,7 +2,9 @@
 
 import { FormStatusProps } from "@/components/ui/form-status";
 import { LoginSchema, RegisterSchema } from "@/schemas";
+import bcrypt from "bcrypt";
 import { z } from "zod";
+import { db } from "./db";
 
 export const login = async (
   formData: z.infer<typeof LoginSchema>,
@@ -27,9 +29,22 @@ export const register = async (
   if (!validatedFields.success) {
     return { status: "error", message: "Something went wrong" };
   }
+
+  const { email, password, username } = validatedFields.data;
+  const hashedPassword = await bcrypt.hash(password, 10);
+
+  // const existingUser = await getUserByEmail(email);
+  // if (existingUser)
+  //   return { status: "error", message: "Email is already taken" };
+
   try {
-    await new Promise((reject) => setTimeout(reject, 2000));
-    console.log(formData);
+    await db.user.create({
+      data: {
+        username,
+        email,
+        password: hashedPassword,
+      },
+    });
     return { status: "success", message: "Registration successful!" };
   } catch (error) {
     return { status: "error", message: "Failed to register " + error };
