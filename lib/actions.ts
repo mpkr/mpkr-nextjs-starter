@@ -25,6 +25,7 @@ export const login = async (
       password,
       redirectTo: DEFAULT_LOGIN_REDIRECT,
     });
+    console.log("successfully login");
     return { status: "success", message: "Email sent!" };
   } catch (error) {
     if (error instanceof AuthError) {
