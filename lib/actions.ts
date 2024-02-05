@@ -4,7 +4,7 @@ import { signIn } from "@/auth";
 import { FormStatusProps } from "@/components/ui/form-status";
 import { DEFAULT_LOGIN_REDIRECT } from "@/route";
 import { LoginSchema, RegisterSchema } from "@/schemas";
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 import { AuthError } from "next-auth";
 import { z } from "zod";
 import { db } from "./db";
@@ -42,7 +42,7 @@ export const login = async (
 export const register = async (
   formData: z.infer<typeof RegisterSchema>,
 ): Promise<FormStatusProps> => {
-  const validatedFields = RegisterSchema.safeParse(formData);
+  const validatedFields = await RegisterSchema.safeParseAsync(formData);
   if (!validatedFields.success) {
     return { status: "error", message: "Something went wrong" };
   }
@@ -57,7 +57,7 @@ export const register = async (
   try {
     await db.user.create({
       data: {
-        username,
+        name: username,
         email,
         password: hashedPassword,
       },

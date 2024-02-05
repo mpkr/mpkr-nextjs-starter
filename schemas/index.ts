@@ -17,9 +17,15 @@ export const RegisterSchema = z
       .email({
         message: "Please enter a valid email address",
       })
-      .refine(async (data) => await getUserByEmail(data), {
-        message: "Email is already taken",
-      }),
+      .refine(
+        async (data) => {
+          const user = await getUserByEmail(data);
+          return data !== user?.email;
+        },
+        {
+          message: "Email is already taken",
+        },
+      ),
     password: z
       .string()
       .min(6, { message: "Password must be at least 6 characters" }),
