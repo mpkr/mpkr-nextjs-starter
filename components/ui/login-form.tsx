@@ -41,8 +41,8 @@ export const LoginForm = () => {
     startTransition(() => {
       login(values).then((data) => {
         setFormStatus({
-          status: data.status,
-          message: data.message,
+          status: data?.status,
+          message: data?.message,
         });
       });
     });
