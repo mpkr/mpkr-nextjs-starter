@@ -2,12 +2,15 @@
 
 import { signIn } from "@/auth";
 import { FormStatusProps } from "@/components/ui/form-status";
+import { getUserByEmail } from "@/data/user";
 import { DEFAULT_LOGIN_REDIRECT } from "@/route";
 import { LoginSchema, RegisterSchema } from "@/schemas";
 import bcrypt from "bcryptjs";
 import { AuthError } from "next-auth";
 import { z } from "zod";
 import { db } from "./db";
+import { sendVerificationEmail } from "./mail";
+import { generateVerificationToken } from "./token";
 
 export const login = async (
   formData: z.infer<typeof LoginSchema>,
@@ -19,6 +22,23 @@ export const login = async (
   }
 
   const { email, password } = validatedFields.data;
+  const existingUser = await getUserByEmail(email);
+
+  if (!existingUser || !existingUser.email || !existingUser.password) {
+    return { status: "error", message: "Email is not existed" };
+  }
+
+  if (!existingUser.emailVerified) {
+    const verificationToken = await generateVerificationToken(
+      existingUser.email,
+    );
+    await sendVerificationEmail(
+      verificationToken.email,
+      verificationToken.token,
+    );
+    return { status: "success", message: "Cofirmation email sent!" };
+  }
+
   try {
     await signIn("credentials", {
       email,
@@ -45,7 +65,11 @@ export const register = async (
 ): Promise<FormStatusProps> => {
   const validatedFields = await RegisterSchema.safeParseAsync(formData);
   if (!validatedFields.success) {
-    return { status: "error", message: "Something went wrong" };
+    console.log(JSON.parse(validatedFields.error.message));
+    return {
+      status: "error",
+      message: JSON.parse(validatedFields.error.message)[0].message,
+    };
   }
 
   const { email, password, username } = validatedFields.data;
@@ -63,7 +87,12 @@ export const register = async (
         password: hashedPassword,
       },
     });
-    return { status: "success", message: "Registration successful!" };
+    const verificationToken = await generateVerificationToken(email);
+    await sendVerificationEmail(
+      verificationToken.email,
+      verificationToken.token,
+    );
+    return { status: "success", message: "Confirmation email sent!" };
   } catch (error) {
     return { status: "error", message: "Failed to register " + error };
   }
