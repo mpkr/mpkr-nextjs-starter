@@ -3,6 +3,7 @@
 import { signIn } from "@/auth";
 import { FormStatusProps } from "@/components/ui/form-status";
 import { getUserByEmail } from "@/data/user";
+import { getVerificationTokenByToken } from "@/data/verification-token";
 import { DEFAULT_LOGIN_REDIRECT } from "@/route";
 import { LoginSchema, RegisterSchema } from "@/schemas";
 import bcrypt from "bcryptjs";
@@ -96,4 +97,38 @@ export const register = async (
   } catch (error) {
     return { status: "error", message: "Failed to register " + error };
   }
+};
+
+export const newVerification = async (
+  token: string,
+): Promise<FormStatusProps> => {
+  const existingToken = await getVerificationTokenByToken(token);
+  if (!existingToken) {
+    return { status: "error", message: "Token does not exist" };
+  }
+
+  const hasExpired = new Date(existingToken.expires) < new Date();
+  if (hasExpired) {
+    return { status: "error", message: "Token has expired. Resend?" };
+  }
+
+  const existingUser = await getUserByEmail(existingToken.email);
+
+  if (!existingUser) {
+    return { status: "error", message: "Email dose not exist" };
+  }
+  await db.user.update({
+    where: { id: existingUser.id },
+    data: {
+      emailVerified: new Date(),
+      email: existingToken.email,
+    },
+  });
+
+  //TODO: Change to keep
+  await db.verificationToken.delete({
+    where: { id: existingToken.id },
+  });
+
+  return { status: "success", message: "Email verified!" };
 };
