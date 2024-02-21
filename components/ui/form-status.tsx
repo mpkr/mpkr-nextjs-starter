@@ -13,7 +13,6 @@ export interface FormStatusProps {
 
 export const FormStatus = ({ status, message }: FormStatusProps) => {
   if (!status) return null;
-
   return (
     <div
       className={cn(

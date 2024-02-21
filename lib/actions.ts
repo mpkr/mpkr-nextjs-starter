@@ -5,13 +5,13 @@ import { FormStatusProps } from "@/components/ui/form-status";
 import { getUserByEmail } from "@/data/user";
 import { getVerificationTokenByToken } from "@/data/verification-token";
 import { DEFAULT_LOGIN_REDIRECT } from "@/route";
-import { LoginSchema, RegisterSchema } from "@/schemas";
+import { LoginSchema, RegisterSchema, ResetSchema } from "@/schemas";
 import bcrypt from "bcryptjs";
 import { AuthError } from "next-auth";
 import { z } from "zod";
 import { db } from "./db";
-import { sendVerificationEmail } from "./mail";
-import { generateVerificationToken } from "./token";
+import { sendPasswordResetEmail, sendVerificationEmail } from "./mail";
+import { generatePasswordResetToken, generateVerificationToken } from "./token";
 
 export const login = async (
   formData: z.infer<typeof LoginSchema>,
@@ -109,7 +109,7 @@ export const newVerification = async (
 
   const hasExpired = new Date(existingToken.expires) < new Date();
   if (hasExpired) {
-    return { status: "error", message: "Token has expired. Resend?" };
+    return { status: "error", message: "Token has expired" };
   }
 
   const existingUser = await getUserByEmail(existingToken.email);
@@ -131,4 +131,31 @@ export const newVerification = async (
   });
 
   return { status: "success", message: "Email verified!" };
+};
+
+export const resetPassword = async (
+  formData: z.infer<typeof ResetSchema>,
+): Promise<FormStatusProps> => {
+  const validatedFields = ResetSchema.safeParse(formData);
+  if (!validatedFields.success) {
+    console.log(JSON.parse(validatedFields.error.message));
+    return {
+      status: "error",
+      message: JSON.parse(validatedFields.error.message)[0].message,
+    };
+  }
+
+  const { email } = validatedFields.data;
+
+  const existingUser = await getUserByEmail(email);
+  if (!existingUser) return { status: "error", message: "Email not found" };
+
+  //TODO:
+  const passwordResetToken = await generatePasswordResetToken(email);
+  await sendPasswordResetEmail(
+    passwordResetToken.email,
+    passwordResetToken.token,
+  );
+
+  return { status: "success", message: "Reset email sent" };
 };
