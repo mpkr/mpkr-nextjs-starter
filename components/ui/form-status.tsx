@@ -16,7 +16,7 @@ export const FormStatus = ({ status, message }: FormStatusProps) => {
   return (
     <div
       className={cn(
-        "flex items-center gap-x-2 rounded-md p-3 text-sm",
+        "flex items-center justify-center gap-x-2 rounded-md p-3 text-sm",
         status === "error"
           ? "bg-destructive/15 text-destructive"
           : "bg-emerald-500/15 text-emerald-500",

@@ -2,10 +2,16 @@
 
 import { signIn } from "@/auth";
 import { FormStatusProps } from "@/components/ui/form-status";
+import { getPasswordResetTokenByToken } from "@/data/password-reset-token";
 import { getUserByEmail } from "@/data/user";
 import { getVerificationTokenByToken } from "@/data/verification-token";
 import { DEFAULT_LOGIN_REDIRECT } from "@/route";
-import { LoginSchema, RegisterSchema, ResetSchema } from "@/schemas";
+import {
+  LoginSchema,
+  NewPasswordSchema,
+  RegisterSchema,
+  ResetSchema,
+} from "@/schemas";
 import bcrypt from "bcryptjs";
 import { AuthError } from "next-auth";
 import { z } from "zod";
@@ -138,7 +144,6 @@ export const resetPassword = async (
 ): Promise<FormStatusProps> => {
   const validatedFields = ResetSchema.safeParse(formData);
   if (!validatedFields.success) {
-    console.log(JSON.parse(validatedFields.error.message));
     return {
       status: "error",
       message: JSON.parse(validatedFields.error.message)[0].message,
@@ -158,4 +163,51 @@ export const resetPassword = async (
   );
 
   return { status: "success", message: "Reset email sent" };
+};
+
+export const setNewPassword = async (
+  formData: z.infer<typeof NewPasswordSchema>,
+  token?: string | null,
+): Promise<FormStatusProps> => {
+  if (!token) {
+    return { status: "error", message: "Missing token!" };
+  }
+
+  const validatedFields = NewPasswordSchema.safeParse(formData);
+
+  if (!validatedFields.success) {
+    return {
+      status: "error",
+      message: JSON.parse(validatedFields.error.message)[0].message,
+    };
+  }
+
+  const { password, confirmPassword } = validatedFields.data;
+  const existingToken = await getPasswordResetTokenByToken(token);
+
+  if (!existingToken) {
+    return { status: "error", message: "Invalid token" };
+  }
+
+  const hasExpired = new Date(existingToken.expires) < new Date();
+
+  if (hasExpired) {
+    return { status: "error", message: "Token has expired!" };
+  }
+
+  const existingUser = await getUserByEmail(existingToken.email);
+  if (!existingUser) {
+    return { status: "error", message: "Email does not exist!" };
+  }
+
+  const hashedPassword = await bcrypt.hash(password, 10);
+  await db.user.update({
+    where: { id: existingUser.id },
+    data: { password: hashedPassword },
+  });
+  await db.passwordResetToken.delete({
+    where: { id: existingToken.id },
+  });
+
+  return { status: "success", message: "New password is set" };
 };
