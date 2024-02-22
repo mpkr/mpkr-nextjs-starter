@@ -3,6 +3,8 @@
 import { signIn } from "@/auth";
 import { FormStatusProps } from "@/components/ui/form-status";
 import { getPasswordResetTokenByToken } from "@/data/password-reset-token";
+import { getTwoFactorConfirmationByUserId } from "@/data/two-factor-confirmation";
+import { getTwoFactorTokenByEmail } from "@/data/two-factor-token";
 import { getUserByEmail } from "@/data/user";
 import { getVerificationTokenByToken } from "@/data/verification-token";
 import { DEFAULT_LOGIN_REDIRECT } from "@/route";
@@ -16,19 +18,27 @@ import bcrypt from "bcryptjs";
 import { AuthError } from "next-auth";
 import { z } from "zod";
 import { db } from "./db";
-import { sendPasswordResetEmail, sendVerificationEmail } from "./mail";
-import { generatePasswordResetToken, generateVerificationToken } from "./token";
+import {
+  sendPasswordResetEmail,
+  sendTwoFactorTokenEmail,
+  sendVerificationEmail,
+} from "./mail";
+import {
+  generatePasswordResetToken,
+  generateTwoFactorToken,
+  generateVerificationToken,
+} from "./token";
 
 export const login = async (
   formData: z.infer<typeof LoginSchema>,
-): Promise<FormStatusProps> => {
+): Promise<FormStatusProps | any> => {
   const validatedFields = LoginSchema.safeParse(formData);
 
   if (!validatedFields.success) {
     return { status: "error", message: "Something went wrong" };
   }
 
-  const { email, password } = validatedFields.data;
+  const { email, password, code } = validatedFields.data;
   const existingUser = await getUserByEmail(email);
 
   if (!existingUser || !existingUser.email || !existingUser.password) {
@@ -44,6 +54,48 @@ export const login = async (
       verificationToken.token,
     );
     return { status: "success", message: "Cofirmation email sent!" };
+  }
+
+  if (existingUser.isTwoFactorEnalbed && existingUser.email) {
+    if (code) {
+      const twoFactorToken = await getTwoFactorTokenByEmail(existingUser.email);
+
+      if (!twoFactorToken) {
+        return { status: "error", message: "Invalid code!" };
+      }
+
+      if (twoFactorToken.token !== code) {
+        return { status: "error", message: "Invalid code!" };
+      }
+
+      const hasExpired = new Date(twoFactorToken.expires) < new Date();
+      if (hasExpired) {
+        return { status: "error", message: "Code expired!" };
+      }
+
+      await db.twoFactorToken.delete({
+        where: { id: twoFactorToken.id },
+      });
+
+      const existingConfirmation = await getTwoFactorConfirmationByUserId(
+        existingUser.id,
+      );
+
+      if (existingConfirmation) {
+        await db.twoFactorConfirmation.delete({
+          where: { id: existingConfirmation.id },
+        });
+      }
+
+      await db.twoFactorConfirmation.create({
+        data: { userId: existingUser.id },
+      });
+    } else {
+      const twoFactorToken = await generateTwoFactorToken(existingUser.email);
+      await sendTwoFactorTokenEmail(twoFactorToken.email, twoFactorToken.token);
+
+      return { twoFactor: true };
+    }
   }
 
   try {
