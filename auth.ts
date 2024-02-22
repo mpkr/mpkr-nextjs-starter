@@ -1,18 +1,10 @@
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { UserRole } from "@prisma/client";
-import NextAuth, { DefaultSession } from "next-auth";
+import NextAuth from "next-auth";
 import authConfig from "./auth.config";
 import { getTwoFactorConfirmationByUserId } from "./data/two-factor-confirmation";
 import { getUserById } from "./data/user";
 import { db } from "./lib/db";
-
-declare module "next-auth" {
-  interface Session {
-    user: {
-      role: UserRole;
-    } & DefaultSession["user"];
-  }
-}
 
 export const {
   handlers: { GET, POST },
@@ -61,15 +53,20 @@ export const {
       }
 
       if (token.role && session.user) {
-        session.user.role = token.role;
-        return session;
+        session.user.role = token.role as UserRole;
       }
+
+      if (session.user) {
+        session.user.isTwoFactorEnalbed = token.isTwoFactorEnalbed as boolean;
+      }
+      return session;
     },
     async jwt({ token }) {
       if (!token.sub) return token;
       const existingUser = await getUserById(token.sub);
       if (!existingUser) return token;
       token.role = existingUser.role;
+      token.isTwoFactorEnalbed = existingUser.isTwoFactorEnalbed;
       return token;
     },
   },

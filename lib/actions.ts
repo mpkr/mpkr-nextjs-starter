@@ -1,6 +1,6 @@
 "use server";
 
-import { signIn } from "@/auth";
+import { signIn, signOut } from "@/auth";
 import { FormStatusProps } from "@/components/ui/form-status";
 import { getPasswordResetTokenByToken } from "@/data/password-reset-token";
 import { getTwoFactorConfirmationByUserId } from "@/data/two-factor-confirmation";
@@ -262,4 +262,8 @@ export const setNewPassword = async (
   });
 
   return { status: "success", message: "New password is set" };
+};
+
+export const logout = async () => {
+  await signOut();
 };

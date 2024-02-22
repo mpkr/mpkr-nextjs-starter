@@ -5,9 +5,13 @@ import crypto from "crypto";
 import { v4 as uuidv4 } from "uuid";
 import { db } from "./db";
 
+const minutes = (num: number) => {
+  return num * 60 * 1000;
+};
+
 export const generateVerificationToken = async (email: string) => {
   const token = uuidv4();
-  const expires = new Date(new Date().getTime() + 3600 * 1000);
+  const expires = new Date(new Date().getTime() + minutes(60));
 
   const existingToken = await getVerificationTokenByEmail(email);
 
@@ -30,7 +34,7 @@ export const generateVerificationToken = async (email: string) => {
 
 export const generatePasswordResetToken = async (email: string) => {
   const token = uuidv4();
-  const expires = new Date(new Date().getTime() + 3600 * 1000);
+  const expires = new Date(new Date().getTime() + minutes(60));
 
   const existingToken = await getPasswordResetTokenByEmail(email);
   if (existingToken) {
@@ -52,7 +56,7 @@ export const generatePasswordResetToken = async (email: string) => {
 
 export const generateTwoFactorToken = async (email: string) => {
   const token = crypto.randomInt(100_000, 1_000_000).toString();
-  const expires = new Date(new Date().getTime() + 300 * 1000);
+  const expires = new Date(new Date().getTime() + minutes(5));
 
   const existingToken = await getTwoFactorTokenByEmail(email);
   if (existingToken) {

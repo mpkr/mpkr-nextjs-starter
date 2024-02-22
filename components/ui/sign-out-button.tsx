@@ -1,15 +1,9 @@
-import { signOut } from "@/auth";
-import { Button } from "./button";
+import { logout } from "@/lib/actions";
 
-export const LogOutButton = () => {
+export const LogOutButton = ({ children }: { children: React.ReactNode }) => {
   return (
-    <form
-      action={async () => {
-        'use server'
-        await signOut();
-      }}
-    >
-      <Button type="submit">Sign Out</Button>
-    </form>
+    <span onClick={() => logout()} className="cursor-pointer">
+      {children}
+    </span>
   );
 };

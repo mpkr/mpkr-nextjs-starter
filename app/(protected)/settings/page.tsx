@@ -1,14 +1,10 @@
-import { auth } from "@/auth";
-import { LogOutButton } from "@/components/ui/sign-out-button";
+"use client";
 
-const SettingPage = async () => {
-  const session = await auth();
-  return (
-    <div>
-      {JSON.stringify(session)}
-      <LogOutButton />
-    </div>
-  );
+import { useCurrentUser } from "@/hooks/use-current-user";
+
+const SettingPage = () => {
+  const user = useCurrentUser();
+  return <div className="rounded-xl bg-white p-10"></div>;
 };
 
 export default SettingPage;
