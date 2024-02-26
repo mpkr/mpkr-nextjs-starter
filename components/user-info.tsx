@@ -8,7 +8,6 @@ interface UserInfoProps {
 }
 
 export const UserInfo = ({ user, label }: UserInfoProps) => {
-  console.log(user);
   return (
     <Card className="w-[500px] shadow-md">
       <CardHeader>
@@ -41,8 +40,8 @@ export const UserInfo = ({ user, label }: UserInfoProps) => {
         </div>
         <div className="flex items-center justify-between  rounded-lg border p-3 shadow-sm">
           <p className="text-sm font-medium">Two Factor Authentication</p>
-          <Badge variant={user?.isTwoFactorEnalbed ? "success" : "destructive"}>
-            {user?.isTwoFactorEnalbed ? "ON" : "OFF"}
+          <Badge variant={user?.isTwoFactorEnabled ? "success" : "destructive"}>
+            {user?.isTwoFactorEnabled ? "ON" : "OFF"}
           </Badge>
         </div>
       </CardContent>

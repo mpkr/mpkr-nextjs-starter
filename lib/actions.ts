@@ -5,7 +5,7 @@ import { FormStatusProps } from "@/components/ui/form-status";
 import { getPasswordResetTokenByToken } from "@/data/password-reset-token";
 import { getTwoFactorConfirmationByUserId } from "@/data/two-factor-confirmation";
 import { getTwoFactorTokenByEmail } from "@/data/two-factor-token";
-import { getUserByEmail } from "@/data/user";
+import { getUserByEmail, getUserById } from "@/data/user";
 import { getVerificationTokenByToken } from "@/data/verification-token";
 import { DEFAULT_LOGIN_REDIRECT } from "@/route";
 import {
@@ -13,10 +13,12 @@ import {
   NewPasswordSchema,
   RegisterSchema,
   ResetSchema,
+  SettingSchema,
 } from "@/schemas";
 import bcrypt from "bcryptjs";
 import { AuthError } from "next-auth";
 import { z } from "zod";
+import { currentUser } from "./auth";
 import { db } from "./db";
 import {
   sendPasswordResetEmail,
@@ -56,7 +58,7 @@ export const login = async (
     return { status: "success", message: "Cofirmation email sent!" };
   }
 
-  if (existingUser.isTwoFactorEnalbed && existingUser.email) {
+  if (existingUser.isTwoFactorEnabled && existingUser.email) {
     if (code) {
       const twoFactorToken = await getTwoFactorTokenByEmail(existingUser.email);
 
@@ -124,7 +126,6 @@ export const register = async (
 ): Promise<FormStatusProps> => {
   const validatedFields = await RegisterSchema.safeParseAsync(formData);
   if (!validatedFields.success) {
-    console.log(JSON.parse(validatedFields.error.message));
     return {
       status: "error",
       message: JSON.parse(validatedFields.error.message)[0].message,
@@ -266,4 +267,61 @@ export const setNewPassword = async (
 
 export const logout = async () => {
   await signOut();
+};
+
+export const settings = async (
+  values: z.infer<typeof SettingSchema>,
+): Promise<FormStatusProps> => {
+  const user = await currentUser();
+  if (!user) return { status: "error", message: "Unauthorized" };
+
+  const dbUser = await getUserById(user.id);
+  if (!dbUser) return { status: "error", message: "Unauthorized" };
+
+  if (user.isOAuth) {
+    values.email = undefined;
+    values.password = undefined;
+    values.newPassword = undefined;
+    values.isTwoFactorEnabled = undefined;
+  }
+
+  if (values.email && values.email !== user.email) {
+    const existingUser = await getUserByEmail(values.email);
+    if (existingUser && existingUser.id !== user.id) {
+      return { status: "error", message: "Email already in use" };
+    }
+    const verificationToken = await generateVerificationToken(values.email);
+    await sendVerificationEmail(
+      verificationToken.email,
+      verificationToken.token,
+    );
+
+    return { status: "success", message: "Verification email sent!" };
+  }
+
+  if (values.password && values.newPassword && dbUser.password) {
+    const passwordMatch = await bcrypt.compare(
+      values.password,
+      dbUser.password,
+    );
+
+    if (!passwordMatch)
+      return { status: "error", message: "Incorrect password" };
+    const hashedNewPassword = await bcrypt.hash(values.newPassword, 10);
+    values.password = hashedNewPassword;
+    values.newPassword = undefined;
+  }
+
+  await new Promise((resolve) => {
+    setTimeout(resolve, 2000);
+  });
+
+  await db.user.update({
+    where: { id: dbUser.id },
+    data: {
+      ...values,
+    },
+  });
+
+  return { status: "success", message: "Settings updated" };
 };
