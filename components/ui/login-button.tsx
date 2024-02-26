@@ -1,7 +1,6 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { ModeContext } from "../ModeContext";
 import { Dialog, DialogContent, DialogTrigger } from "./dialog";
 import { LoginForm } from "./login-form";
 
@@ -27,9 +26,7 @@ export const LoginButton = ({
       <Dialog>
         <DialogTrigger asChild={asChild}>{children}</DialogTrigger>
         <DialogContent className="w-auto border-none bg-transparent p-0">
-          <ModeContext.Provider value={mode}>
-            <LoginForm />
-          </ModeContext.Provider>
+          <LoginForm />
         </DialogContent>
       </Dialog>
     );

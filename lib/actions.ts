@@ -33,6 +33,7 @@ import {
 
 export const login = async (
   formData: z.infer<typeof LoginSchema>,
+  callbackUrl?: string | null,
 ): Promise<FormStatusProps | any> => {
   const validatedFields = LoginSchema.safeParse(formData);
 
@@ -104,7 +105,7 @@ export const login = async (
     await signIn("credentials", {
       email,
       password,
-      redirectTo: DEFAULT_LOGIN_REDIRECT,
+      redirectTo: callbackUrl || DEFAULT_LOGIN_REDIRECT,
     });
     console.log("successfully login");
     return { status: "success", message: "Email sent!" };
