@@ -1,17 +1,21 @@
-This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+This is my [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app) with prettier tailwind css + shadcn-ui + next-auth.
 
 ## Getting Started
 
-First, run the development server:
+Create new project
+```bash
+npx create-next-app --example https://github.com/mpkr/next-auth-mpkr-starter <YOUR_APP_NAME>
+```
+
+First, install dependencies:
+```bash
+npm i
+```
+
+then run the development server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
