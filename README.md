@@ -12,6 +12,12 @@ First, install dependencies:
 npm i
 ```
 
+Upgrade NextJs if needed
+
+```bash
+npm i next@latest react@latest react-dom@latest eslint-config-next@latest
+```
+
 then run the development server:
 
 ```bash
